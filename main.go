@@ -1,0 +1,32 @@
+package main
+
+import (
+	"log"
+
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/service"
+	"go.opentelemetry.io/collector/service/defaultcomponents"
+)
+
+func main() {
+	factories, err := defaultcomponents.Components()
+	if err != nil {
+		log.Fatalf("failed to build components: %v", err)
+	}
+
+	info := component.ApplicationStartInfo{
+		ExeName:  "otelcol-custom",
+		LongName: "Custom OpenTelemetry Collector distribution",
+		Version:  "1.0.0",
+	}
+
+	app, err := service.New(service.Parameters{ApplicationStartInfo: info, Factories: factories})
+	if err != nil {
+		log.Fatal("failed to construct the application: %w", err)
+	}
+
+	err = app.Run()
+	if err != nil {
+		log.Fatal("application run finished with error: %w", err)
+	}
+}
