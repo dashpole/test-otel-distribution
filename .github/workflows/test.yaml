@@ -1,0 +1,46 @@
+name: Test
+
+on: [push]
+
+jobs:
+  correctness:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 30
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        path: branch
+    - name: Checkout upstream
+      with:
+        repository: dashpole/opentelemetry-collector
+        path: upstream
+        ref: test_actions
+      uses: actions/checkout@v2
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.15'
+    - name: Install Upstream Tools
+      working-directory: upstream
+      run:
+        make install-tools
+    - name: Install fluentbit
+      run: |
+        sudo chmod 0777 -R /opt
+        sudo ln -s /opt/td-agent-bit/bin/td-agent-bit /usr/local/bin/fluent-bit
+        wget https://packages.fluentbit.io/ubuntu/bionic/pool/main/t/td-agent-bit/td-agent-bit_1.5.3_amd64.deb
+        sudo dpkg -i ./td-agent-bit*.deb
+    - name: Generate Upstream tools
+      working-directory: upstream
+      run:
+        go generate ./...
+    - name: Build
+      working-directory: branch
+      run: go build .
+    - name: Correctness
+      uses: dashpole/opentelemetry-collector@test_actions
+      env:
+        WORKING_DIRECTORY: branch
+        UPSTREAM_DIRECTORY: upstream
+        TESTBED_CONFIG: testconfig.yaml
